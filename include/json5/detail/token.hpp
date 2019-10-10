@@ -41,7 +41,7 @@ struct token
 public:
     token()
         : _type(token_type::eof)
-        , _integer(0)
+        , _as(integer_type{}) // dummy
     {
     }
 
@@ -49,7 +49,7 @@ public:
 
     token(token_type type)
         : _type(type)
-        , _integer(0)
+        , _as(integer_type{}) // dummy
     {
     }
 
@@ -57,7 +57,7 @@ public:
 
     token(integer_type value)
         : _type(token_type::integer)
-        , _integer(value)
+        , _as(value)
     {
     }
 
@@ -65,7 +65,7 @@ public:
 
     token(number_type value)
         : _type(token_type::number)
-        , _number(value)
+        , _as(value)
     {
     }
 
@@ -73,7 +73,16 @@ public:
 
     token(token_type type, const string_type& value)
         : _type(type)
-        , _string(new std::string(value))
+        , _as(new string_type(value))
+    {
+        assert(type == token_type::string || type == token_type::identifier);
+    }
+
+
+
+    token(token_type type, string_type&& value)
+        : _type(type)
+        , _as(new string_type(std::move(value)))
     {
         assert(type == token_type::string || type == token_type::identifier);
     }
@@ -82,7 +91,7 @@ public:
 
     token(token_type type, const string_type::value_type* value)
         : _type(type)
-        , _string(new std::string(value))
+        , _as(new string_type(value))
     {
         assert(type == token_type::string || type == token_type::identifier);
     }
@@ -91,18 +100,15 @@ public:
 
     token(const token& other)
         : _type(other._type)
+        , _as(other._as)
     {
         switch (_type)
         {
-        case token_type::integer: _integer = other._integer; break;
-        case token_type::number: _number = other._number; break;
         case token_type::string:
         case token_type::identifier:
-            _string = new std::string(*other._string);
+            _as.string = new string_type(*other._as.string);
             break;
-        default:
-            _integer = 0; // dummy
-            break;
+        default: break;
         }
     }
 
@@ -110,19 +116,13 @@ public:
 
     token(token&& other) noexcept
         : _type(other._type)
+        , _as(other._as)
     {
         switch (_type)
         {
-        case token_type::integer: _integer = other._integer; break;
-        case token_type::number: _number = other._number; break;
         case token_type::string:
-        case token_type::identifier:
-            _string = other._string;
-            other._string = nullptr;
-            break;
-        default:
-            _integer = 0; // dummy
-            break;
+        case token_type::identifier: other._as.string = nullptr; break;
+        default: break;
         }
     }
 
@@ -149,7 +149,7 @@ public:
     void swap(token& other)
     {
         std::swap(_type, other._type);
-        std::swap(_integer, other._integer); // TODO
+        std::swap(_as, other._as);
     }
 
 
@@ -158,7 +158,7 @@ public:
     {
         if (_type == token_type::string || _type == token_type::identifier)
         {
-            delete _string;
+            delete _as.string;
         }
     }
 
@@ -173,21 +173,21 @@ public:
 
     constexpr integer_type get_integer() const noexcept
     {
-        return _integer;
+        return _as.integer;
     }
 
 
 
     constexpr number_type get_number() const noexcept
     {
-        return _number;
+        return _as.number;
     }
 
 
 
     constexpr const string_type& get_string() const noexcept
     {
-        return *_string;
+        return *_as.string;
     }
 
 
@@ -236,12 +236,31 @@ private:
     token_type _type;
 
 
-    union
+    union _U
     {
-        integer_type _integer;
-        number_type _number;
-        string_type* _string;
-    };
+        integer_type integer;
+        number_type number;
+        string_type* string;
+
+
+
+        constexpr _U(integer_type v)
+            : integer(v)
+        {
+        }
+
+
+        constexpr _U(number_type v)
+            : number(v)
+        {
+        }
+
+
+        constexpr _U(string_type* v)
+            : string(v)
+        {
+        }
+    } _as;
 };
 
 } // namespace detail

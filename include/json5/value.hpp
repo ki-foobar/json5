@@ -23,23 +23,23 @@ public:
 
     constexpr value() noexcept
         : _type(value_type::null)
-        , _null()
+        , _as(null_type{})
     {
     }
 
 
 
-    constexpr value(null_type) noexcept
+    constexpr value(null_type v) noexcept
         : _type(value_type::null)
-        , _null()
+        , _as(v)
     {
     }
 
 
 
-    constexpr value(bool v) noexcept
+    constexpr value(boolean_type v) noexcept
         : _type(value_type::boolean)
-        , _boolean(v)
+        , _as(v)
     {
     }
 
@@ -47,7 +47,7 @@ public:
 
     constexpr value(integer_type v) noexcept
         : _type(value_type::integer)
-        , _integer(v)
+        , _as(v)
     {
     }
 
@@ -55,7 +55,7 @@ public:
 
     constexpr value(number_type v) noexcept
         : _type(value_type::number)
-        , _number(v)
+        , _as(v)
     {
     }
 
@@ -63,7 +63,7 @@ public:
 
     value(const string_type& v)
         : _type(value_type::string)
-        , _string(new string_type(v))
+        , _as(new string_type(v))
     {
     }
 
@@ -71,7 +71,7 @@ public:
 
     value(string_type&& v)
         : _type(value_type::string)
-        , _string(new string_type(std::move(v)))
+        , _as(new string_type(std::move(v)))
     {
     }
 
@@ -79,7 +79,7 @@ public:
 
     value(const array_type& v)
         : _type(value_type::array)
-        , _array(new array_type(v))
+        , _as(new array_type(v))
     {
     }
 
@@ -87,7 +87,7 @@ public:
 
     value(array_type&& v)
         : _type(value_type::array)
-        , _array(new array_type(std::move(v)))
+        , _as(new array_type(std::move(v)))
     {
     }
 
@@ -95,7 +95,7 @@ public:
 
     value(const object_type& v)
         : _type(value_type::object)
-        , _object(new object_type(v))
+        , _as(new object_type(v))
     {
     }
 
@@ -103,7 +103,7 @@ public:
 
     value(object_type&& v)
         : _type(value_type::object)
-        , _object(new object_type(std::move(v)))
+        , _as(new object_type(std::move(v)))
     {
     }
 
@@ -111,20 +111,20 @@ public:
 
     value(const value& other)
         : _type(other._type)
+        , _as(other._as)
     {
         switch (_type)
         {
-        case value_type::null: _null = other._null; break;
-        case value_type::boolean: _boolean = other._boolean; break;
-        case value_type::integer: _integer = other._integer; break;
-        case value_type::number: _number = other._number; break;
         case value_type::string:
-            _string = new string_type(*other._string);
+            _as.string = new string_type(*other._as.string);
             break;
-        case value_type::array: _array = new array_type(*other._array); break;
+        case value_type::array:
+            _as.array = new array_type(*other._as.array);
+            break;
         case value_type::object:
-            _object = new object_type(*other._object);
+            _as.object = new object_type(*other._as.object);
             break;
+        default: break;
         }
     }
 
@@ -132,25 +132,14 @@ public:
 
     value(value&& other) noexcept
         : _type(other._type)
+        , _as(other._as)
     {
         switch (_type)
         {
-        case value_type::null: _null = other._null; break;
-        case value_type::boolean: _boolean = other._boolean; break;
-        case value_type::integer: _integer = other._integer; break;
-        case value_type::number: _number = other._number; break;
-        case value_type::string:
-            _string = other._string;
-            other._string = nullptr;
-            break;
-        case value_type::array:
-            _array = other._array;
-            other._array = nullptr;
-            break;
-        case value_type::object:
-            _object = other._object;
-            other._object = nullptr;
-            break;
+        case value_type::string: other._as.string = nullptr; break;
+        case value_type::array: other._as.array = nullptr; break;
+        case value_type::object: other._as.object = nullptr; break;
+        default: break;
         }
     }
 
@@ -182,9 +171,9 @@ public:
         case value_type::boolean: break;
         case value_type::integer: break;
         case value_type::number: break;
-        case value_type::string: delete _string; break;
-        case value_type::array: delete _array; break;
-        case value_type::object: delete _object; break;
+        case value_type::string: delete _as.string; break;
+        case value_type::array: delete _as.array; break;
+        case value_type::object: delete _as.object; break;
         }
     }
 
@@ -193,7 +182,7 @@ public:
     void swap(value& other) noexcept
     {
         std::swap(_type, other._type);
-        std::swap(_string, other._string); // TODO
+        std::swap(_as, other._as);
     }
 
 
@@ -221,7 +210,7 @@ public:
         {
             throw invalid_type_error{_type, value_type::null};
         }
-        return _null;
+        return _as.null;
     }
 
 
@@ -233,7 +222,7 @@ public:
         {
             throw invalid_type_error{_type, value_type::null};
         }
-        return _null;
+        return _as.null;
     }
 
 
@@ -245,7 +234,7 @@ public:
         {
             throw invalid_type_error{_type, value_type::boolean};
         }
-        return _boolean;
+        return _as.boolean;
     }
 
 
@@ -257,7 +246,7 @@ public:
         {
             throw invalid_type_error{_type, value_type::boolean};
         }
-        return _boolean;
+        return _as.boolean;
     }
 
 
@@ -269,7 +258,7 @@ public:
         {
             throw invalid_type_error{_type, value_type::integer};
         }
-        return _integer;
+        return _as.integer;
     }
 
 
@@ -281,7 +270,7 @@ public:
         {
             throw invalid_type_error{_type, value_type::integer};
         }
-        return _integer;
+        return _as.integer;
     }
 
 
@@ -293,7 +282,7 @@ public:
         {
             throw invalid_type_error{_type, value_type::number};
         }
-        return _number;
+        return _as.number;
     }
 
 
@@ -305,7 +294,7 @@ public:
         {
             throw invalid_type_error{_type, value_type::number};
         }
-        return _number;
+        return _as.number;
     }
 
 
@@ -317,7 +306,7 @@ public:
         {
             throw invalid_type_error{_type, value_type::string};
         }
-        return *_string;
+        return *_as.string;
     }
 
 
@@ -329,7 +318,7 @@ public:
         {
             throw invalid_type_error{_type, value_type::string};
         }
-        return *_string;
+        return *_as.string;
     }
 
 
@@ -341,7 +330,7 @@ public:
         {
             throw invalid_type_error{_type, value_type::array};
         }
-        return *_array;
+        return *_as.array;
     }
 
 
@@ -353,7 +342,7 @@ public:
         {
             throw invalid_type_error{_type, value_type::array};
         }
-        return *_array;
+        return *_as.array;
     }
 
 
@@ -365,7 +354,7 @@ public:
         {
             throw invalid_type_error{_type, value_type::object};
         }
-        return *_object;
+        return *_as.object;
     }
 
 
@@ -377,7 +366,7 @@ public:
         {
             throw invalid_type_error{_type, value_type::object};
         }
-        return *_object;
+        return *_as.object;
     }
 
 
@@ -386,16 +375,59 @@ private:
     value_type _type;
 
 
-    union
+    union _U
     {
-        null_type _null;
-        boolean_type _boolean;
-        integer_type _integer;
-        number_type _number;
-        string_type* _string;
-        array_type* _array;
-        object_type* _object;
-    };
+        null_type null;
+        boolean_type boolean;
+        integer_type integer;
+        number_type number;
+        string_type* string;
+        array_type* array;
+        object_type* object;
+
+
+
+        constexpr _U(null_type v)
+            : null(v)
+        {
+        }
+
+
+        constexpr _U(boolean_type v)
+            : boolean(v)
+        {
+        }
+
+
+        constexpr _U(integer_type v)
+            : integer(v)
+        {
+        }
+
+
+        constexpr _U(number_type v)
+            : number(v)
+        {
+        }
+
+
+        constexpr _U(string_type* v)
+            : string(v)
+        {
+        }
+
+
+        constexpr _U(array_type* v)
+            : array(v)
+        {
+        }
+
+
+        constexpr _U(object_type* v)
+            : object(v)
+        {
+        }
+    } _as;
 };
 
 } // namespace json5
