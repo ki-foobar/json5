@@ -109,6 +109,95 @@ public:
 
 
 
+    value(const value& other)
+        : _type(other._type)
+    {
+        switch (_type)
+        {
+        case value_type::null: _null = other._null; break;
+        case value_type::boolean: _boolean = other._boolean; break;
+        case value_type::integer: _integer = other._integer; break;
+        case value_type::number: _number = other._number; break;
+        case value_type::string:
+            _string = new string_type(*other._string);
+            break;
+        case value_type::array: _array = new array_type(*other._array); break;
+        case value_type::object:
+            _object = new object_type(*other._object);
+            break;
+        }
+    }
+
+
+
+    value(value&& other) noexcept
+        : _type(other._type)
+    {
+        switch (_type)
+        {
+        case value_type::null: _null = other._null; break;
+        case value_type::boolean: _boolean = other._boolean; break;
+        case value_type::integer: _integer = other._integer; break;
+        case value_type::number: _number = other._number; break;
+        case value_type::string:
+            _string = other._string;
+            other._string = nullptr;
+            break;
+        case value_type::array:
+            _array = other._array;
+            other._array = nullptr;
+            break;
+        case value_type::object:
+            _object = other._object;
+            other._object = nullptr;
+            break;
+        }
+    }
+
+
+
+    value& operator=(const value& other)
+    {
+        value tmp = other;
+        tmp.swap(*this);
+        return *this;
+    }
+
+
+
+    value& operator=(value&& other) noexcept
+    {
+        value tmp = std::move(other);
+        tmp.swap(*this);
+        return *this;
+    }
+
+
+
+    ~value()
+    {
+        switch (_type)
+        {
+        case value_type::null: break;
+        case value_type::boolean: break;
+        case value_type::integer: break;
+        case value_type::number: break;
+        case value_type::string: delete _string; break;
+        case value_type::array: delete _array; break;
+        case value_type::object: delete _object; break;
+        }
+    }
+
+
+
+    void swap(value& other) noexcept
+    {
+        std::swap(_type, other._type);
+        std::swap(_string, other._string); // TODO
+    }
+
+
+
     constexpr value_type type() const noexcept
     {
         return _type;

@@ -158,7 +158,7 @@ public:
     {
         if (_type == token_type::string || _type == token_type::identifier)
         {
-            destroy(_string);
+            delete _string;
         }
     }
 

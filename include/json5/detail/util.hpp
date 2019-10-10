@@ -24,17 +24,6 @@ inline constexpr number_type nan() noexcept
 
 
 
-template <typename T>
-void destroy(T* ptr)
-{
-    if (ptr)
-    {
-        ptr->~T();
-    }
-}
-
-
-
 inline constexpr bool is_digit(char c) noexcept
 {
     return '0' <= c && c <= '9';
