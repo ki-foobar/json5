@@ -203,171 +203,42 @@ public:
 
 
 
-    template <>
-    constexpr const null_type& get<null_type>() const
-    {
-        if (_type != value_type::null)
-        {
-            throw invalid_type_error{_type, value_type::null};
-        }
-        return _as.null;
+#define JSON5_IDENTITY(expr) expr
+#define JSON5_DEREFERENCE(expr) *(expr)
+
+#define JSON5_GET_METHOD_BODY(T, ret) \
+    if (_type != value_type::T) \
+    { \
+        throw invalid_type_error{_type, value_type::T}; \
+    } \
+    return ret(_as.T);
+
+#define JSON5_DEFINE_GET_METHOD(T, ret) \
+    template <> \
+    constexpr const T##_type& get<T##_type>() const \
+    { \
+        JSON5_GET_METHOD_BODY(T, ret) \
+    } \
+\
+    template <> \
+    constexpr T##_type& get<T##_type>() \
+    { \
+        JSON5_GET_METHOD_BODY(T, ret) \
     }
 
 
+    JSON5_DEFINE_GET_METHOD(null, JSON5_IDENTITY)
+    JSON5_DEFINE_GET_METHOD(boolean, JSON5_IDENTITY)
+    JSON5_DEFINE_GET_METHOD(integer, JSON5_IDENTITY)
+    JSON5_DEFINE_GET_METHOD(number, JSON5_IDENTITY)
+    JSON5_DEFINE_GET_METHOD(string, JSON5_DEREFERENCE)
+    JSON5_DEFINE_GET_METHOD(array, JSON5_DEREFERENCE)
+    JSON5_DEFINE_GET_METHOD(object, JSON5_DEREFERENCE)
 
-    template <>
-    constexpr null_type& get<null_type>()
-    {
-        if (_type != value_type::null)
-        {
-            throw invalid_type_error{_type, value_type::null};
-        }
-        return _as.null;
-    }
-
-
-
-    template <>
-    constexpr const boolean_type& get<boolean_type>() const
-    {
-        if (_type != value_type::boolean)
-        {
-            throw invalid_type_error{_type, value_type::boolean};
-        }
-        return _as.boolean;
-    }
-
-
-
-    template <>
-    constexpr boolean_type& get<boolean_type>()
-    {
-        if (_type != value_type::boolean)
-        {
-            throw invalid_type_error{_type, value_type::boolean};
-        }
-        return _as.boolean;
-    }
-
-
-
-    template <>
-    constexpr const integer_type& get<integer_type>() const
-    {
-        if (_type != value_type::integer)
-        {
-            throw invalid_type_error{_type, value_type::integer};
-        }
-        return _as.integer;
-    }
-
-
-
-    template <>
-    constexpr integer_type& get<integer_type>()
-    {
-        if (_type != value_type::integer)
-        {
-            throw invalid_type_error{_type, value_type::integer};
-        }
-        return _as.integer;
-    }
-
-
-
-    template <>
-    constexpr const number_type& get<number_type>() const
-    {
-        if (_type != value_type::number)
-        {
-            throw invalid_type_error{_type, value_type::number};
-        }
-        return _as.number;
-    }
-
-
-
-    template <>
-    constexpr number_type& get<number_type>()
-    {
-        if (_type != value_type::number)
-        {
-            throw invalid_type_error{_type, value_type::number};
-        }
-        return _as.number;
-    }
-
-
-
-    template <>
-    constexpr const string_type& get<string_type>() const
-    {
-        if (_type != value_type::string)
-        {
-            throw invalid_type_error{_type, value_type::string};
-        }
-        return *_as.string;
-    }
-
-
-
-    template <>
-    constexpr string_type& get<string_type>()
-    {
-        if (_type != value_type::string)
-        {
-            throw invalid_type_error{_type, value_type::string};
-        }
-        return *_as.string;
-    }
-
-
-
-    template <>
-    constexpr const array_type& get<array_type>() const
-    {
-        if (_type != value_type::array)
-        {
-            throw invalid_type_error{_type, value_type::array};
-        }
-        return *_as.array;
-    }
-
-
-
-    template <>
-    constexpr array_type& get<array_type>()
-    {
-        if (_type != value_type::array)
-        {
-            throw invalid_type_error{_type, value_type::array};
-        }
-        return *_as.array;
-    }
-
-
-
-    template <>
-    constexpr const object_type& get<object_type>() const
-    {
-        if (_type != value_type::object)
-        {
-            throw invalid_type_error{_type, value_type::object};
-        }
-        return *_as.object;
-    }
-
-
-
-    template <>
-    constexpr object_type& get<object_type>()
-    {
-        if (_type != value_type::object)
-        {
-            throw invalid_type_error{_type, value_type::object};
-        }
-        return *_as.object;
-    }
+#undef JSON5_DEFINE_GET_METHOD
+#undef JSON5_GET_METHOD_BODY
+#undef JSON5_DEREFERENCE
+#undef JSON5_IDENTITY
 
 
 
