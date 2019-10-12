@@ -44,4 +44,4 @@ int main()
 
 MIT
 
-Copyright (c) 2019 KI
+See [LICENSE](LICENSE) for details.
