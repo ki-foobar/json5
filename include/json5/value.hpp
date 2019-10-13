@@ -236,18 +236,6 @@ public:
     return ret(_as.T);
 
 #define JSON5_DEFINE_GET_METHOD(T, ret) \
-    template <> \
-    constexpr const T##_type& get<T##_type>() const \
-    { \
-        JSON5_GET_METHOD_BODY(T, ret) \
-    } \
-\
-    template <> \
-    constexpr T##_type& get<T##_type>() \
-    { \
-        JSON5_GET_METHOD_BODY(T, ret) \
-    } \
-\
     constexpr const T##_type& get_##T() const \
     { \
         JSON5_GET_METHOD_BODY(T, ret) \
@@ -260,39 +248,29 @@ public:
 
 
 
-    // get<null_type>()
     // get_null()
     JSON5_DEFINE_GET_METHOD(null, JSON5_IDENTITY)
 
-    // get<boolean_type>()
     // get_boolean()
     JSON5_DEFINE_GET_METHOD(boolean, JSON5_IDENTITY)
 
-    // get<integer_type>()
     // get_integer()
     JSON5_DEFINE_GET_METHOD(integer, JSON5_IDENTITY)
 
-    // get<number_type>()
     // get_number()
     JSON5_DEFINE_GET_METHOD(number, JSON5_IDENTITY)
 
-    // get<string_type>()
     // get_string()
     JSON5_DEFINE_GET_METHOD(string, JSON5_DEREFERENCE)
 
-    // get<array_type>()
     // get_array()
     JSON5_DEFINE_GET_METHOD(array, JSON5_DEREFERENCE)
 
-    // get<object_type>()
     // get_object()
     JSON5_DEFINE_GET_METHOD(object, JSON5_DEREFERENCE)
 
 
 #undef JSON5_DEFINE_GET_METHOD
-#undef JSON5_GET_METHOD_BODY
-#undef JSON5_DEREFERENCE
-#undef JSON5_IDENTITY
 
 
 
@@ -385,6 +363,51 @@ private:
         }
     } _as;
 };
+
+
+
+#define JSON5_DEFINE_GET_METHOD(T, ret) \
+    template <> \
+    constexpr const value::T##_type& value::get<value::T##_type>() const \
+    { \
+        JSON5_GET_METHOD_BODY(T, ret) \
+    } \
+\
+    template <> \
+    constexpr value::T##_type& value::get<value::T##_type>() \
+    { \
+        JSON5_GET_METHOD_BODY(T, ret) \
+    }
+
+
+
+// get<null_type>()
+JSON5_DEFINE_GET_METHOD(null, JSON5_IDENTITY)
+
+// get<boolean_type>()
+JSON5_DEFINE_GET_METHOD(boolean, JSON5_IDENTITY)
+
+// get<integer_type>()
+JSON5_DEFINE_GET_METHOD(integer, JSON5_IDENTITY)
+
+// get<number_type>()
+JSON5_DEFINE_GET_METHOD(number, JSON5_IDENTITY)
+
+// get<string_type>()
+JSON5_DEFINE_GET_METHOD(string, JSON5_DEREFERENCE)
+
+// get<array_type>()
+JSON5_DEFINE_GET_METHOD(array, JSON5_DEREFERENCE)
+
+// get<object_type>()
+JSON5_DEFINE_GET_METHOD(object, JSON5_DEREFERENCE)
+
+
+
+#undef JSON5_DEFINE_GET_METHOD
+#undef JSON5_GET_METHOD_BODY
+#undef JSON5_DEREFERENCE
+#undef JSON5_IDENTITY
 
 
 
