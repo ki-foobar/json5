@@ -4,6 +4,10 @@
 #include "./types.hpp"
 
 
+#define JSON5_ENABLE_IF(cond) \
+    typename std::enable_if<(cond), std::nullptr_t>::type = nullptr
+
+
 
 namespace json5
 {
@@ -88,6 +92,24 @@ public:
     value(array_type&& v)
         : _type(value_type::array)
         , _as(new array_type(std::move(v)))
+    {
+    }
+
+
+
+    template <typename T, JSON5_ENABLE_IF(std::is_integral<T>::value)>
+    value(T v)
+        : _type(value_type::integer)
+        , _as(static_cast<integer_type>(v))
+    {
+    }
+
+
+
+    template <typename T, JSON5_ENABLE_IF(std::is_floating_point<T>::value)>
+    value(T v)
+        : _type(value_type::number)
+        , _as(static_cast<number_type>(v))
     {
     }
 
@@ -363,5 +385,9 @@ private:
         }
     } _as;
 };
+
+
+
+#undef JSON5_ENABLE_IF
 
 } // namespace json5
