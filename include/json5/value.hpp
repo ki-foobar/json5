@@ -274,6 +274,37 @@ public:
 
 
 
+    constexpr explicit operator bool() const noexcept
+    {
+        return is_truthy();
+    }
+
+
+
+    constexpr bool is_truthy() const noexcept
+    {
+        return !is_falsy();
+    }
+
+
+
+    constexpr bool is_falsy() const noexcept
+    {
+        switch (_type)
+        {
+        case value_type::null: return true;
+        case value_type::boolean: return !_as.boolean;
+        case value_type::integer: return _as.integer == 0;
+        case value_type::number:
+            return _as.number == 0 || std::isnan(_as.number);
+        case value_type::string: return _as.string->empty();
+        case value_type::array: return false;
+        case value_type::object: return false;
+        }
+    }
+
+
+
 private:
     value_type _type;
 
