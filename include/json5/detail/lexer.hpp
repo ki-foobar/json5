@@ -410,7 +410,8 @@ private:
             {
                 get();
                 consume_hexadecial_integer();
-                return std::stoll(_source.substr(start), 0, 16);
+                return static_cast<integer_type>(
+                    std::stoll(_source.substr(start), 0, 16));
             }
 
             while (!eof())
