@@ -29,6 +29,7 @@ constexpr const char* to_string(value_type type) noexcept
     case value_type::string: return "string";
     case value_type::array: return "array";
     case value_type::object: return "object";
+    default: return "<invalid>";
     }
 }
 

@@ -228,6 +228,7 @@ public:
         }
         case token_type::string:
         case token_type::identifier: return get_string();
+        default: return "<invalid>";
         }
     }
 

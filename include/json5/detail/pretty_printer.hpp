@@ -54,6 +54,7 @@ public:
             return _opts.prettify ? array_prettified(v) : array(v);
         case value_type::object:
             return _opts.prettify ? object_prettified(v) : object(v);
+        default: return "<unreachable>";
         }
     }
 

@@ -204,6 +204,7 @@ public:
         case value_type::string: delete _as.string; break;
         case value_type::array: delete _as.array; break;
         case value_type::object: delete _as.object; break;
+        default: break; // unreachable
         }
     }
 
@@ -347,6 +348,7 @@ public:
         case value_type::string: return _as.string->empty();
         case value_type::array: return false;
         case value_type::object: return false;
+        default: return false; // unreachable
         }
     }
 
