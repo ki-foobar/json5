@@ -274,6 +274,45 @@ public:
 
 
 
+    template <typename T>
+    constexpr bool is() const noexcept;
+
+
+
+#define JSON5_DEFINE_IS_METHOD(T) \
+    constexpr bool is_##T() const noexcept \
+    { \
+        return type() == value_type::T; \
+    }
+
+
+
+    // is_null()
+    JSON5_DEFINE_IS_METHOD(null)
+
+    // is_boolean()
+    JSON5_DEFINE_IS_METHOD(boolean)
+
+    // is_integer()
+    JSON5_DEFINE_IS_METHOD(integer)
+
+    // is_number()
+    JSON5_DEFINE_IS_METHOD(number)
+
+    // is_string()
+    JSON5_DEFINE_IS_METHOD(string)
+
+    // is_array()
+    JSON5_DEFINE_IS_METHOD(array)
+
+    // is_object()
+    JSON5_DEFINE_IS_METHOD(object)
+
+
+#undef JSON5_DEFINE_IS_METHOD
+
+
+
     constexpr explicit operator bool() const noexcept
     {
         return is_truthy();
@@ -408,6 +447,40 @@ JSON5_DEFINE_GET_METHOD(object, JSON5_DEREFERENCE)
 #undef JSON5_GET_METHOD_BODY
 #undef JSON5_DEREFERENCE
 #undef JSON5_IDENTITY
+
+
+
+#define JSON5_DEFINE_IS_METHOD(T) \
+    template <> \
+    constexpr bool value::is<value::T##_type>() const noexcept \
+    { \
+        return type() == value_type::T; \
+    }
+
+
+// is<null_type>()
+JSON5_DEFINE_IS_METHOD(null)
+
+// is<boolean_type>()
+JSON5_DEFINE_IS_METHOD(boolean)
+
+// is<integer_type>()
+JSON5_DEFINE_IS_METHOD(integer)
+
+// is<number_type>()
+JSON5_DEFINE_IS_METHOD(number)
+
+// is<string_type>()
+JSON5_DEFINE_IS_METHOD(string)
+
+// is<array_type>()
+JSON5_DEFINE_IS_METHOD(array)
+
+// is<object_type>()
+JSON5_DEFINE_IS_METHOD(object)
+
+
+#undef JSON5_DEFINE_IS_METHOD
 
 
 
