@@ -103,8 +103,19 @@ private:
 
     std::string quote(const std::string& s)
     {
-        // TODO
-        return "\"" + s + "\"";
+        std::string ret;
+        ret.reserve(s.size() + 2);
+        ret += '\"';
+        for (const auto& c : s)
+        {
+            if (c == '"' || c == '\\')
+            {
+                ret += '\\';
+            }
+            ret += c;
+        }
+        ret += '\"';
+        return ret;
     }
 };
 
