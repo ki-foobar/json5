@@ -81,6 +81,14 @@ public:
 
 
 
+    value(const string_type::value_type* v)
+        : _type(value_type::string)
+        , _as(new string_type(v))
+    {
+    }
+
+
+
     value(const array_type& v)
         : _type(value_type::array)
         , _as(new array_type(v))
