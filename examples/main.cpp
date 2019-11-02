@@ -22,4 +22,9 @@ int main()
 )");
 
     std::cout << json5::stringify(features) << std::endl;
+    json5::stringify_options opts;
+    opts.prettify = true;
+    opts.unquote_key = true;
+    opts.insert_trailing_comma = true;
+    std::cout << json5::stringify(features, opts) << std::endl;
 }
