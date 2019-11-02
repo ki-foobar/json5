@@ -94,43 +94,18 @@ private:
 
 
 
-struct lex_error : public std::runtime_error
+struct syntax_error : public std::runtime_error
 {
-    lex_error(const std::string& actual_char, const char* expected_char)
-        : std::runtime_error(build_error_message(actual_char, expected_char))
-        , _actual_char(actual_char)
-        , _expected_char(expected_char)
+    syntax_error(const char* error_message)
+        : std::runtime_error(error_message)
     {
     }
 
 
 
-    const std::string& actual_char() const noexcept
+    syntax_error(const std::string& error_message)
+        : std::runtime_error(error_message)
     {
-        return _actual_char;
-    }
-
-
-
-    const char* expected_char() const noexcept
-    {
-        return _expected_char;
-    }
-
-
-
-private:
-    std::string _actual_char;
-    const char* _expected_char;
-
-
-
-    static std::string build_error_message(
-        const std::string& actual_char,
-        const char* expected_char)
-    {
-        return std::string{"expect "} + expected_char + ", but actually " +
-            actual_char;
     }
 };
 

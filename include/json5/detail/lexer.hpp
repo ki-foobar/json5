@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../exceptions.hpp"
 #include "./token.hpp"
 #include "./util.hpp"
 
@@ -14,7 +15,7 @@ class lexer
 {
 public:
     lexer(const std::string& source)
-        : _sourse(source)
+        : _source(source)
         , _pos(0)
     {
     }
@@ -34,7 +35,7 @@ public:
 
 
 private:
-    std::string _sourse;
+    std::string _source;
     size_t _pos;
 
 
@@ -54,12 +55,13 @@ private:
                 get();
                 if (eof())
                 {
-                    throw lex_error{"<EOF>", "'//' or '/*'"};
+                    throw invalid_char("'//' or '/*'");
                 }
 
-                const auto k = get();
+                const auto k = peek();
                 if (k == '/')
                 {
+                    get();
                     while (!eof())
                     {
                         const auto c = get();
@@ -79,12 +81,13 @@ private:
                 }
                 else if (k == '*')
                 {
+                    get();
                     bool previos_char_is_asterisk = false;
                     while (true)
                     {
                         if (eof())
                         {
-                            throw lex_error{"<EOF>", "'*/'"};
+                            throw invalid_char("'*/'");
                         }
 
                         const auto c = get();
@@ -107,7 +110,7 @@ private:
                 }
                 else
                 {
-                    throw lex_error{format_char(k), "'//' or '/*'"};
+                    throw invalid_char("'//' or '/*'");
                 }
             }
             break;
@@ -149,7 +152,7 @@ private:
         {
             if (eof())
             {
-                throw lex_error{"<EOF>", q == '"' ? "'\"'" : "'"};
+                throw invalid_char(q == '"' ? "'\"'" : "'");
             }
 
             const auto c = get();
@@ -159,7 +162,23 @@ private:
             }
             else if (c == '\r' || c == '\n')
             {
-                throw lex_error{"line break", c == '\r' ? "\\\\r" : "\\\\n"};
+                const char* br;
+                if (!eof() && peek() == '\n')
+                {
+                    br = "\\r\\n";
+                }
+                else if (c == '\r')
+                {
+                    br = "\\r";
+                }
+                else
+                {
+                    br = "\\n";
+                }
+                throw syntax_error{
+                    std::string{"raw line break cannot be included in string "
+                                "literals, use '"} +
+                    br + "'"};
             }
             else if (c == '\\')
             {
@@ -175,29 +194,130 @@ private:
 
 
 
+    /*
+     * Escape Sequence Table
+     * +----+-----------------+--------+
+     * | \' | apostrophe      | U+0027 |
+     * | \" | quotation mark  | U+0022 |
+     * | \\ | reverse solidus | U+005C |
+     * | \b | backspace       | U+0008 |
+     * | \f | form feed       | U+000C |
+     * | \n | line feed       | U+000A |
+     * | \r | carriage return | U+000D |
+     * | \t | horizontal tab  | U+0009 |
+     * | \v | vertical tab    | U+000B |
+     * | \0 | null            | U+0000 |
+     * +----+-----------------+--------+
+     */
     std::string scan_escape_sequence()
     {
         if (eof())
         {
-            throw lex_error{"<EOF>", "escape sequence"};
+            throw invalid_char("escape sequence");
         }
 
         const auto c = get();
         switch (c)
         {
         case '\'': return "'";
-        case '\\': return "\\";
         case '"': return "\"";
-        case 'a': return "\a";
+        case '\\': return "\\";
         case 'b': return "\b";
         case 'f': return "\f";
-        case 't': return "\t";
-        case 'r': return "\r";
         case 'n': return "\n";
-        case '0': return "\0";
-        default:
-            // todo
-            return "";
+        case 'r': return "\r";
+        case 't': return "\t";
+        case 'v': return "\v";
+        case '0':
+            if (is_digit(peek()))
+            {
+                throw syntax_error{
+                    "C-style octal character literal is not allowed except for "
+                    "'\\0'. Use "
+                    "prefix \\x or \\u"};
+            }
+            else
+            {
+                return "\0";
+            }
+        case '\r':
+            if (peek() == '\n')
+            {
+                get();
+            }
+            return ""; // skip the line break.
+        case '\n': return ""; // skip the line break.
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+            throw syntax_error{
+                "C-style octal character literal is not allowed except for "
+                "'\\0'. Use "
+                "prefix \\x or \\u"};
+        case 'x':
+        {
+            // \xNN (N: a hexadecimal digit)
+            // U+0000 - U+00FF
+            char32_t codepoint = escape_sequence_codepoint(2);
+            if (is_hex_digit(peek()))
+            {
+                throw syntax_error{
+                    "Escape sequence prefixed by '\\x' must be followed by "
+                    "only two hexadecimal digits, but got third one."};
+            }
+            return codepoint_to_string(codepoint);
+        }
+        case 'u':
+        {
+            // \uNNNN (N: a hexadecimal digit)
+            // U+0000 - U+FFFF
+            char32_t first = escape_sequence_codepoint(4);
+            if (is_hex_digit(peek()))
+            {
+                throw syntax_error{
+                    "Escape sequence prefixed by '\\u' must be followed by "
+                    "only four hexadecimal digits, but got fifth one."};
+            }
+            if (peek() == '\\')
+            {
+                // Surrogate pair?
+                get();
+                if (peek() == 'u')
+                {
+                    // They are a surrogate pair.
+                    char32_t second = escape_sequence_codepoint(4);
+                    if (is_hex_digit(peek()))
+                    {
+                        throw syntax_error{
+                            "Escape sequence prefixed by '\\u' must be "
+                            "followed by "
+                            "only four hexadecimal digits, but got fifth one."};
+                    }
+                    return codepoint_to_string(
+                        surrogate_pair_to_codepoint(first, second));
+                }
+                else
+                {
+                    if (is_surrogate_pair_first(first))
+                    {
+                        throw invalid_char("second part of surrogate pair");
+                    }
+                    // Not surrogate pair, next escape sequence.
+                    return codepoint_to_string(first) + scan_escape_sequence();
+                }
+            }
+            else
+            {
+                return codepoint_to_string(first);
+            }
+        }
+        default: return std::string{1, c};
         }
     }
 
@@ -290,7 +410,7 @@ private:
             {
                 get();
                 consume_hexadecial_integer();
-                return std::stoll(_sourse.substr(start), 0, 16);
+                return std::stoll(_source.substr(start), 0, 16);
             }
 
             while (!eof())
@@ -329,7 +449,8 @@ private:
         }
         else
         {
-            throw lex_error{format_char(c), "invalid character"};
+            throw syntax_error{"invalid character, " +
+                               get_current_char_for_error_message()};
         }
 
         bool has_decimal_point = false;
@@ -351,7 +472,7 @@ private:
             }
             if (starts_with_decimal_point && !has_any_digit)
             {
-                throw lex_error{format_char(peek()), "digit"};
+                throw invalid_char("any digit");
             }
             has_decimal_point = true;
         }
@@ -360,12 +481,12 @@ private:
         if (has_decimal_point || has_exponent)
         {
             return token{
-                static_cast<number_type>(std::stold(_sourse.substr(start), 0))};
+                static_cast<number_type>(std::stold(_source.substr(start), 0))};
         }
         else
         {
             return token{static_cast<integer_type>(
-                std::stoll(_sourse.substr(start), 0))};
+                std::stoll(_source.substr(start), 0))};
         }
     }
 
@@ -377,10 +498,14 @@ private:
         get();
         for (const char* s_ = s + 1; *s_; ++s_)
         {
-            const auto c = get();
-            if (*s_ != c)
+            const auto c = peek();
+            if (*s_ == c)
             {
-                throw lex_error{format_char(c), s};
+                get();
+            }
+            else
+            {
+                throw invalid_char(s);
             }
         }
     }
@@ -404,8 +529,7 @@ private:
         }
         if (!has_any_digit)
         {
-            throw lex_error{format_char(peek()),
-                            "hexadecimal digit (0-9, a-f or A-F)"};
+            throw invalid_char("hexadecimal digit (0-9, a-f or A-F)");
         }
     }
 
@@ -422,7 +546,7 @@ private:
         get();
         if (eof())
         {
-            throw lex_error{"<EOF>", "digit"};
+            throw invalid_char("digit");
         }
         if (peek() == '+' || peek() == '-')
         {
@@ -443,7 +567,7 @@ private:
         }
         if (!has_any_digit)
         {
-            throw lex_error{format_char(peek()), "digit"};
+            throw invalid_char("any digit");
         }
 
         return true;
@@ -472,13 +596,9 @@ private:
         case 'I':
             if (name == "Infinity")
             {
-                if (sign == 1)
+                if (sign)
                 {
-                    return token{infinity()};
-                }
-                else if (sign == -1)
-                {
-                    return token{-infinity()};
+                    return token{sign * infinity()};
                 }
                 else
                 {
@@ -504,7 +624,8 @@ private:
             {
                 if (sign)
                 {
-                    throw lex_error{"null", "digit"};
+                    throw syntax_error{
+                        "expected any number, but actually got 'null'"};
                 }
                 else
                 {
@@ -517,7 +638,8 @@ private:
             {
                 if (sign)
                 {
-                    throw lex_error{"true", "digit"};
+                    throw syntax_error{
+                        "expected any number, but actually got 'true'"};
                 }
                 else
                 {
@@ -530,7 +652,8 @@ private:
             {
                 if (sign)
                 {
-                    throw lex_error{"false", "digit"};
+                    throw syntax_error{
+                        "expected any number, but actually got 'false'"};
                 }
                 else
                 {
@@ -538,31 +661,50 @@ private:
                 }
             }
             break;
+        default: break;
         }
+
         return token{token_type::identifier, name};
     }
 
 
 
-    char peek()
+    char32_t escape_sequence_codepoint(size_t n)
     {
-        return _sourse[_pos];
+        char32_t ret{};
+        for (size_t i = 0; i < n; ++i)
+        {
+            const auto c = peek();
+            if (!is_hex_digit(c))
+            {
+                throw invalid_char("hexadecimal digit (0-9, a-f or A-F)");
+            }
+            ret = ret * 16 + hex_digit_char_to_integer(c);
+        }
+        return ret;
+    }
+
+
+
+    char peek() const
+    {
+        return _source[_pos];
     }
 
 
 
     char get()
     {
-        const auto ret = _sourse[_pos];
+        const auto ret = _source[_pos];
         ++_pos;
         return ret;
     }
 
 
 
-    bool eof()
+    bool eof() const
     {
-        return _sourse.size() <= _pos;
+        return _source.size() <= _pos;
     }
 
 
@@ -571,6 +713,86 @@ private:
     {
         // TODO
         return std::string(1, c);
+    }
+
+
+
+    syntax_error invalid_char(const char* expected_char)
+    {
+        return syntax_error{std::string{"expected "} + expected_char +
+                            ", but actually got " +
+                            get_current_char_for_error_message() + "."};
+    }
+
+
+
+    std::string get_current_char_for_error_message() const
+    {
+        if (eof())
+            return "<EOF>";
+
+        const size_t start = _pos;
+        const size_t end = start + byte_count_utf8(_source[_pos]);
+        if (_source.size() <= end)
+            return "<Invalid UTF-8>";
+
+        switch (end - start)
+        {
+        case 1:
+            switch (peek())
+            {
+            case '\0': return "<NUL>";
+            case '"': return "\"";
+            case '\'': return "'";
+            case '\\': return "'\\'";
+            case '\b': return "'\\b'";
+            case '\f': return "'\\f'";
+            case '\n': return "'\\n'";
+            case '\r': return "'\\r'";
+            case '\t': return "'\\t'";
+            case '\v': return "'\\v'";
+            default:
+                if (peek() < ' ')
+                {
+                    return "'U+'" +
+                        codepoint_to_hex_digit_string(
+                               static_cast<char32_t>(peek()));
+                }
+                else
+                {
+                    return std::string{"'"} + peek() + "'";
+                }
+            }
+        case 2:
+        {
+            const auto first = _source[start];
+            const auto second = _source[start + 1];
+            const char32_t codepoint =
+                ((first & 0b0001'1111) << 6) | (second & 0b0011'1111);
+            return "'U+'" + codepoint_to_hex_digit_string(codepoint);
+        }
+        case 3:
+        {
+            const auto first = _source[start];
+            const auto second = _source[start + 1];
+            const auto third = _source[start + 2];
+            const char32_t codepoint = ((first & 0b0000'1111) << 12) |
+                ((second & 0b0011'1111) << 6) | (third & 0b0011'1111);
+            return "'U+'" + codepoint_to_hex_digit_string(codepoint);
+        }
+        case 4:
+        {
+            const auto first = _source[start];
+            const auto second = _source[start + 1];
+            const auto third = _source[start + 2];
+            const auto forth = _source[start + 3];
+            const char32_t codepoint = ((first & 0b0000'0111) << 18) |
+                ((second & 0b0011'1111) << 12) | ((third & 0b0011'1111) << 6) |
+                (forth & 0b0011'1111);
+            return "'U+'" + codepoint_to_hex_digit_string(codepoint);
+        }
+        default: return "<Invalid UTF-8>";
+        }
     }
 };
 
